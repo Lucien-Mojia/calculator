@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>效率计算器</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0f172a;font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif;padding:20px}
+
+.app-container { display: flex; align-items: center; justify-content: center; gap: 30px; width: 100%; max-width: 100%; margin: auto; }
+.side-image-container { display: none; flex: 1; text-align: center; }
+#leftImage img { width: 100%; height: auto; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,.5); background: #fff; cursor: zoom-in; border: 2px solid #cbd5e1; transition: transform .2s; }
+#leftImage img:hover { transform: scale(1.02); }
+#rightImage img { max-height: 85vh; max-width: 100%; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,.5); background: #fff; cursor: zoom-in; border: 2px solid #cbd5e1; transition: transform .2s; }
+#rightImage img:hover { transform: scale(1.02); }
+.card{ width: 100%; max-width: 480px; background: #fff; border-radius: 18px; padding: 24px; box-shadow: 0 20px 50px rgba(0,0,0,.4); flex-shrink: 0; }
+
+@media (max-width: 1150px) {
+  .app-container { flex-direction: column; }
+  .side-image-container { display: none !important; }
+  .mobile-image-container { display: block !important; }
+}
+@media (min-width: 1151px) {
+  .mobile-image-container { display: none !important; }
+}
+
+h1{margin:0 0 4px;font-size:20px;color:#1e3a8a;line-height:1.35}
+.subtitle{margin:0 0 14px;font-size:13px;color:#64748b;font-weight:500}
+.tabs{display:flex;background:#e2e8f0;border-radius:10px;padding:4px;margin-bottom:8px;gap:2px}
+.tab{flex:1;padding:11px 4px;border:0;border-radius:8px;background:transparent;color:#475569;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s}
+.tab.active{background:#1d4ed8;color:#fff;box-shadow:0 2px 8px rgba(29,78,216,.35)}
+.subtabs{display:flex;background:#f1f5f9;border-radius:10px;padding:4px;margin-bottom:6px;gap:2px}
+.subtabs.hidden{display:none}
+.subtab{flex:1;padding:8px 4px;border:0;border-radius:8px;background:transparent;color:#64748b;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;line-height:1.3}
+.subtab.active{background:#fff;color:#1d4ed8;box-shadow:0 2px 6px rgba(0,0,0,.1)}
+.subtab-sub{display:block;font-size:10.5px;font-weight:500;color:#94a3b8;margin-top:1px}
+.subtab.active .subtab-sub{color:#3b82f6}
+.title{font-size:12.5px;color:#64748b;margin:14px 0 16px;font-family:Consolas,monospace;line-height:1.6}
+label{display:block;font-size:13.5px;font-weight:600;color:#334155;margin:12px 0 6px}
+.label-note{font-size:11px;font-weight:400;color:#94a3b8;margin-left:2px}
+input{width:100%;padding:10px 12px;font-size:15px;border:1.5px solid #cbd5e1;border-radius:10px;outline:none;background:#f8fafc;font-family:inherit;color:#0f172a;transition:.15s}
+input:focus{border-color:#2563eb;background:#fff;box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+.hint{font-size:12.5px;color:#64748b;margin:16px 0 0;text-align:center;line-height:1.7}
+.section-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:12px}
+.section-title{font-size:13px;font-weight:700;color:#1e40af;margin-bottom:8px;display:flex;justify-content:space-between}
+.section-title span{font-weight:500;color:#64748b;font-size:11.5px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.result{margin-top:18px;padding:16px;border-radius:12px;background:#eff6ff;border:1.5px solid #bfdbfe;text-align:center}
+.result.bad{background:#fef2f2;border-color:#fecaca}
+.result .label{font-size:13px;color:#1e40af;font-weight:600}
+.result.bad .label{color:#b91c1c}
+.result .value{font-size:34px;font-weight:800;color:#1d4ed8;line-height:1.2;margin:6px 0 4px;word-break:break-all}
+.result.bad .value{color:#dc2626}
+.result .unit{font-size:14px;color:#3b82f6;font-weight:600}
+.result.bad .unit{color:#dc2626}
+.detail{font-size:12.5px;color:#475569;min-height:18px;margin-top:4px}
+.formula{margin-top:12px;padding:12px;border-radius:10px;background:#0f172a;color:#a5f3fc;font-family:Consolas,monospace;font-size:12.5px;line-height:1.65;text-align:center;word-break:break-all}
+.formula:empty{display:none;}
+.stop-display{display:none; margin-top:18px;}
+.stop-display.show{display:block}
+.stop-grid{display:flex;gap:10px}
+.stop-block{flex:1;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px 8px;text-align:center}
+.stop-block.bottleneck{border-color:#f87171;background:#fef2f2;box-shadow:0 0 0 3px rgba(248,113,113,.1)}
+.stop-block .s-label{font-size:13px;color:#64748b;font-weight:600;margin-bottom:6px}
+.stop-block.bottleneck .s-label{color:#b91c1c}
+.stop-block .s-value{font-size:28px;font-weight:800;color:#1e293b;line-height:1.1;word-break:break-all}
+.stop-block.bottleneck .s-value{color:#dc2626}
+.stop-block .s-unit{font-size:12px;color:#64748b;font-weight:600;margin-top:4px}
+.stop-block .s-sub{font-size:11.5px;color:#94a3b8;margin-top:6px}
+.total-bar{margin-top:12px;padding:12px;border-radius:10px;background:#1e3a8a;color:#fff;text-align:center;font-size:14px;font-weight:600;display:flex;justify-content:center;align-items:center;gap:6px}
+.total-bar strong{font-size:18px;color:#fde68a}
+.multi-res{display:flex;flex-direction:column;gap:8px;text-align:left;background:#fff;border-radius:10px;padding:12px;margin-top:10px;border:1px solid #e2e8f0}
+.res-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;border-bottom:1px dashed #e2e8f0;padding-bottom:6px}
+.res-row:last-child{border-bottom:none;padding-bottom:0}
+.res-row span{color:#64748b}
+.res-row strong{color:#16a34a;font-size:16px;font-family:Consolas,monospace}
+.result.bad .res-row strong{color:#dc2626}
+.btns{display:flex;gap:10px;margin-top:16px}
+.btns button{flex:1;padding:12px;border:0;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s}
+.btns button:active{transform:scale(.98)}
+#calcBtn{background:#2563eb;color:#fff}
+#calcBtn:hover{background:#1d4ed8}
+#resetBtn{background:#f1f5f9;color:#475569}
+.footer{margin-top:18px;padding-top:14px;border-top:1px solid #e2e8f0;text-align:center;font-size:11.5px;color:#94a3b8;line-height:1.6}
+
+.formula-guide {
+  background: #f0f9ff;
+  border: 1px dashed #7dd3fc;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  font-size: 12px;
+  color: #0369a1;
+  line-height: 1.6;
+}
+.formula-guide b { color: #0284c7; }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <div class="side-image-container" id="leftImage">
+    <img src="https://i.postimg.cc/pLn3X0S1/1.png" alt="布局图1" onclick="window.open(this.src)">
+  </div>
+
+  <div class="card">
+    <h1>效率计算器</h1>
+    <p class="subtitle">（分拣 / 单称重）</p>
+
+    <div class="tabs">
+      <button class="tab active" id="tabSort" type="button">分拣效率</button>
+      <button class="tab" id="tabInst" type="button">单称重效率</button>
+    </div>
+
+    <div class="subtabs hidden" id="subRowInst">
+      <button class="subtab active" id="tabInstSingle" type="button">单秤效率计算</button>
+      <button class="subtab" id="tabInstDouble" type="button">双秤效率计算</button>
+    </div>
+
+    <div id="instSinglePanel" class="hidden">
+      <div class="formula-guide">
+        <b>【计算逻辑】</b><br>
+        1. 包裹间距 = ( A秤长 - 0.1 + 反应距离 ) ÷ 2<br>
+        2. 等效节距 = 包裹长度 + 包裹间距<br>
+        3. 效率 = 3600 × 皮带速度 ÷ 等效节距
+      </div>
+
+      <label>包裹最大尺寸（m）</label>
+      <input id="i_max" type="number" step="any" value="1.2">
+      <label>仪表反应时间（s）<span class="label-note">（默认0.3）</span></label>
+      <input id="i_react" type="number" step="any" value="0.3">
+      <label>皮带速度（m/s）</label>
+      <input id="i_speed" type="number" step="any" value="1">
+      <label>A秤长（m）</label>
+      <input id="i_lenA" type="number" step="any" value="1.5">
+      <label>效率（件/小时）</label>
+      <input id="i_eff" type="number" step="any" placeholder="留空则自动反推">
+      <p class="hint" style="margin-top:10px;">填 4 个留空 1 个，点击计算即可反推</p>
+    </div>
+
+    <div id="instDoublePanel" class="hidden">
+      <div class="formula-guide">
+        <b>【计算逻辑】</b><br>
+        1. A秤间距 = ( A秤长 - 最小件 + 反应距离 ) ÷ 2<br>
+        2. AB秤间距 = ( B秤长 ÷ 2 ) + 反应距离<br>
+        3. 最终间距 = max(A秤间距, AB秤间距, 反应距离 - 包裹长度)<br>
+        4. 效率 = 3600 × 皮带速度 ÷ (包裹长度 + 最终间距)
+      </div>
+
+      <label>货物最小尺寸（m）</label>
+      <input id="id_min" type="number" step="any" value="0.1">
+      <label>货物最长尺寸（m）<span class="label-note">（超长预警）</span></label>
+      <input id="id_max" type="number" step="any" value="1.2">
+      <label>仪表反应时间（s）<span class="label-note">（默认0.3）</span></label>
+      <input id="id_react" type="number" step="any" value="0.3">
+      <label>皮带速度（m/s）</label>
+      <input id="id_speed" type="number" step="any" value="1">
+      <label>A秤长（m）</label>
+      <input id="id_lenA" type="number" step="any" value="1.1">
+      <label>B秤长（m）</label>
+      <input id="id_lenB" type="number" step="any" value="0.4">
+      <label>平均包裹长度（m）</label>
+      <input id="id_pkgLen" type="number" step="any" value="1.2">
+      <label>效率（件/小时）</label>
+      <input id="id_eff" type="number" step="any" placeholder="留空则自动反推">
+      <p class="hint" style="margin-top:10px;">填 7 个留空 1 个，点击计算即可反推</p>
+    </div>
+
+    <div class="subtabs hidden" id="subRowSort">
+      <button class="subtab active" id="tabStop" type="button">停机</button>
+      <button class="subtab" id="tabRunning" type="button">不停机</button>
+    </div>
+
+    <div class="subtabs hidden" id="subRowSortStop">
+      <button class="subtab" id="tabM600SortStop" type="button">M600GS<span class="subtab-sub">过渡+秤台 1.5m</span></button>
+      <button class="subtab active" id="tabM800SortStop" type="button">M800GS<span class="subtab-sub">过渡+秤台 2.0m</span></button>
+    </div>
+
+    <div id="stopPanel" class="hidden">
+      <div class="mobile-image-container" style="text-align:center; margin-bottom:14px; display:none;">
+        <div style="margin-bottom:10px;">
+          <img src="https://i.postimg.cc/pLn3X0S1/1.png" alt="布局图1" onclick="window.open(this.src)" style="max-width:100%; border-radius:8px; cursor:zoom-in; border:1px solid #e2e8f0;">
+        </div>
+        <div>
+          <img src="https://i.postimg.cc/VkwwbPcm/2.png" alt="布局图2" onclick="window.open(this.src)" style="max-width:100%; border-radius:8px; cursor:zoom-in; border:1px solid #e2e8f0;">
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div>
+          <label>皮带速度（m/s）</label>
+          <input id="s_speed" type="number" step="any" min="0" placeholder="例如 1.0">
+        </div>
+        <div>
+          <label>货物尺寸（m）</label>
+          <input id="s_pkgLen" type="number" step="any" min="0" placeholder="例如 1.0">
+        </div>
+      </div>
+
+      <!-- 智能推荐方案区（命中了表格才显示） -->
+      <div id="planSelection" style="display:none; margin-bottom:12px;">
+        <div class="grid2" style="margin-top:4px;">
+          <button type="button" id="btnSinglePlan" class="subtab" style="border:1.5px solid #cbd5e1; background:#fff; padding:10px; font-size:13px;">
+            单秤方案<br><span id="singlePlanLen" style="font-size:15px; font-weight:800; margin-top:4px; display:block;">— m</span>
+          </button>
+          <button type="button" id="btnDoublePlan" class="subtab" style="border:1.5px solid #cbd5e1; background:#fff; padding:10px; font-size:13px;">
+            双秤方案<br><span id="doublePlanLen" style="font-size:15px; font-weight:800; margin-top:4px; display:block;">— m</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 自定义输入区（非标尺寸显示） -->
+      <div id="customLenDiv" style="margin-bottom:12px;">
+        <label>称台总长（m）</label>
+        <input id="s_fixedLen" type="number" step="any" min="0" placeholder="请手动输入总长">
+      </div>
+
+      <div class="section-box">
+        <div class="section-title">前端（上包/称重段）</div>
+        <div class="grid2">
+          <div>
+            <label>数据段长度（m）</label>
+            <input id="s_dataLen" type="number" step="any" min="0" placeholder="例如 2.0">
+          </div>
+          <div>
+            <label>可存放包裹数量（件）</label>
+            <input id="s_parcelCount" type="number" step="1" min="1" placeholder="例如 3">
+          </div>
+        </div>
+      </div>
+
+      <div class="section-box">
+        <div class="section-title">后端（摆轮分拣段）</div>
+        <div class="grid2">
+          <div>
+            <label>摆轮长度（m）</label>
+            <input id="s_wheelLen" type="number" step="any" min="0" placeholder="例如 0.66">
+          </div>
+          <div>
+            <label>过渡段长度（m）</label>
+            <input id="s_transLen" type="number" step="any" min="0" placeholder="例如 0.8">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="generalPanel" class="hidden">
+      <p class="title" id="formulaTitle">3600 ÷ [（摆轮长度 + 包裹长度）÷ 皮带速度] = 效率</p>
+      <label id="labelA">摆轮长度（m）</label>
+      <input id="lenA" type="number" step="any" min="0" placeholder="例如 1.0">
+      
+      <div id="lenBGroup" style="display:none">
+        <label>包裹长度（m）</label>
+        <input id="lenB" type="number" step="any" min="0" placeholder="例如 0.5">
+      </div>
+
+      <label>皮带速度（m/s）</label>
+      <input id="speed" type="number" step="any" min="0" placeholder="例如 1.0">
+
+      <label>效率（件/小时）</label>
+      <input id="eff" type="number" step="any" min="0" placeholder="例如 2400">
+      <p class="hint" id="hintText">请填写其中三个，留空一个，然后点“计算未知项”</p>
+    </div>
+
+    <div class="result hidden" id="generalResultBox">
+      <div class="label" id="resLabel">等待计算</div>
+      <div class="value"><span id="resVal">—</span><span class="unit" id="resUnit"></span></div>
+      <div class="detail" id="detail">请填写参数</div>
+      <div class="formula" id="formula"></div>
+    </div>
+
+    <div class="stop-display" id="stopResultBox">
+      <div class="stop-grid">
+        <div class="stop-block" id="blockFront">
+          <div class="s-label">前端效率</div>
+          <div class="s-value" id="frontEff">—</div>
+          <div class="s-unit">件/小时</div>
+          <div class="s-sub" id="frontSub">节距 —</div>
+        </div>
+        <div class="stop-block" id="blockBack">
+          <div class="s-label">后端效率</div>
+          <div class="s-value" id="backEff">—</div>
+          <div class="s-unit">件/小时</div>
+          <div class="s-sub" id="backSub">节距 —</div>
+        </div>
+      </div>
+      <div class="total-bar" id="totalBar">
+        整线兼容效率：<strong id="totalEff">—</strong> 件/小时
+      </div>
+    </div>
+
+    <div class="result hidden" id="instResultBox">
+      <div class="label" id="instResLabel">仪表效率</div>
+      <div class="value"><span id="instResVal">—</span><span class="unit"> 件/小时</span></div>
+      <div class="multi-res" id="instMultiRes"></div>
+    </div>
+
+    <div class="btns">
+      <button id="calcBtn" type="button">计算</button>
+      <button id="resetBtn" type="button">清空</button>
+    </div>
+
+    <p class="footer">该程序仅用于简单计算，若需定制请联系技术</p>
+  </div>
+
+  <div class="side-image-container" id="rightImage">
+    <img src="https://i.postimg.cc/VkwwbPcm/2.png" alt="布局图2" onclick="window.open(this.src)">
+  </div>
+</div>
+
+<script>
+(function(){
+  var leftImage = document.getElementById('leftImage');
+  var rightImage = document.getElementById('rightImage');
+
+  var tabSort = document.getElementById('tabSort');
+  var tabInst = document.getElementById('tabInst');
+  var subRowSort = document.getElementById('subRowSort');
+  var subRowSortStop = document.getElementById('subRowSortStop');
+  var subRowInst = document.getElementById('subRowInst');
+  var tabStop = document.getElementById('tabStop');
+  var tabRunning = document.getElementById('tabRunning');
+  var tabM600SortStop = document.getElementById('tabM600SortStop');
+  var tabM800SortStop = document.getElementById('tabM800SortStop');
+  var tabInstSingle = document.getElementById('tabInstSingle');
+  var tabInstDouble = document.getElementById('tabInstDouble');
+
+  var stopPanel = document.getElementById('stopPanel');
+  var generalPanel = document.getElementById('generalPanel');
+  var instSinglePanel = document.getElementById('instSinglePanel');
+  var instDoublePanel = document.getElementById('instDoublePanel');
+  
+  var lenAEl = document.getElementById('lenA');
+  var lenBEl = document.getElementById('lenB');
+  var speedEl = document.getElementById('speed');
+  var effEl = document.getElementById('eff');
+  var lenBGroup = document.getElementById('lenBGroup');
+  var labelA = document.getElementById('labelA');
+  var formulaTitle = document.getElementById('formulaTitle');
+  var hintText = document.getElementById('hintText');
+
+  var s_speed = document.getElementById('s_speed');
+  var s_pkgLen = document.getElementById('s_pkgLen');
+  var s_fixedLen = document.getElementById('s_fixedLen');
+  var s_dataLen = document.getElementById('s_dataLen');
+  var s_parcelCount = document.getElementById('s_parcelCount');
+  var s_wheelLen = document.getElementById('s_wheelLen');
+  var s_transLen = document.getElementById('s_transLen');
+
+  var planSelection = document.getElementById('planSelection');
+  var customLenDiv = document.getElementById('customLenDiv');
+  var btnSinglePlan = document.getElementById('btnSinglePlan');
+  var btnDoublePlan = document.getElementById('btnDoublePlan');
+  var singlePlanLen = document.getElementById('singlePlanLen');
+  var doublePlanLen = document.getElementById('doublePlanLen');
+
+  var currentPlan = ''; // 'single' | 'double' | 'custom'
+
+  // 预设映射表
+  var planTable = {
+    "0.8": { single: 1.1, double: null },
+    "1":   { single: 1.3, double: 1.5 },
+    "1.2": { single: 1.5, double: 1.5 },
+    "1.5": { single: null, double: 2.2 },
+    "1.6": { single: null, double: 2.2 }
+  };
+
+  var generalResultBox = document.getElementById('generalResultBox');
+  var stopResultBox = document.getElementById('stopResultBox');
+  var instResultBox = document.getElementById('instResultBox');
+  
+  var resLabel = document.getElementById('resLabel');
+  var resVal = document.getElementById('resVal');
+  var resUnit = document.getElementById('resUnit');
+  var detailEl = document.getElementById('detail');
+  var formulaEl = document.getElementById('formula');
+
+  var blockFront = document.getElementById('blockFront');
+  var blockBack = document.getElementById('blockBack');
+  var frontEff = document.getElementById('frontEff');
+  var backEff = document.getElementById('backEff');
+  var frontSub = document.getElementById('frontSub');
+  var backSub = document.getElementById('backSub');
+  var totalEff = document.getElementById('totalEff');
+  var totalBar = document.getElementById('totalBar');
+
+  var instResVal = document.getElementById('instResVal');
+  var instMultiRes = document.getElementById('instMultiRes');
+
+  var calcBtn = document.getElementById('calcBtn');
+  var resetBtn = document.getElementById('resetBtn');
+
+  var topMode = 'sort'; 
+  var sortMode = 'stop';  
+  var instMode = 'single'; 
+  var model = 'm800';     
+
+  function fmt(n) {
+    if(!isFinite(n)) return '—';
+    var a = Math.abs(n), d = 2;
+    if(a >= 1000) d = 0;
+    else if(a >= 10) d = 1;
+    return String(Number(n.toFixed(d)));
+  }
+
+  // 根据货物尺寸更新 UI
+  function updatePlanUI() {
+    var pkgLenVal = parseFloat(s_pkgLen.value);
+    if (!(pkgLenVal > 0)) {
+      planSelection.style.display = 'none';
+      customLenDiv.style.display = 'block';
+      s_fixedLen.value = '';
+      currentPlan = '';
+      return;
+    }
+
+    // 容差匹配
+    var matchedKey = null;
+    for (var key in planTable) {
+      if (Math.abs(pkgLenVal - parseFloat(key)) < 0.01) {
+        matchedKey = key;
+        break;
+      }
+    }
+
+    if (matchedKey) {
+      // 命中表格，显示按钮
+      planSelection.style.display = 'block';
+      customLenDiv.style.display = 'none';
+      s_fixedLen.value = '';
+
+      var plan = planTable[matchedKey];
+      
+      // 单秤按钮
+      if (plan.single) {
+        btnSinglePlan.style.display = 'block';
+        singlePlanLen.innerHTML = plan.single + ' m';
+        singlePlanLen.style.color = '#1d4ed8';
+        btnSinglePlan.disabled = false;
+        btnSinglePlan.style.opacity = '1';
+        btnSinglePlan.style.cursor = 'pointer';
+      } else {
+        btnSinglePlan.style.display = 'block';
+        singlePlanLen.innerHTML = '不支持';
+        singlePlanLen.style.color = '#94a3b8';
+        btnSinglePlan.disabled = true;
+        btnSinglePlan.style.opacity = '0.5';
+        btnSinglePlan.style.cursor = 'not-allowed';
+      }
+
+      // 双秤按钮
+      if (plan.double) {
+        btnDoublePlan.style.display = 'block';
+        doublePlanLen.innerHTML = plan.double + ' m';
+        doublePlanLen.style.color = '#1d4ed8';
+        btnDoublePlan.disabled = false;
+        btnDoublePlan.style.opacity = '1';
+        btnDoublePlan.style.cursor = 'pointer';
+      } else {
+        btnDoublePlan.style.display = 'block';
+        doublePlanLen.innerHTML = '不支持';
+        doublePlanLen.style.color = '#94a3b8';
+        btnDoublePlan.disabled = true;
+        btnDoublePlan.style.opacity = '0.5';
+        btnDoublePlan.style.cursor = 'not-allowed';
+      }
+
+      // 如果之前选的方案现在不支持了，重置
+      if (currentPlan === 'single' && !plan.single) currentPlan = '';
+      if (currentPlan === 'double' && !plan.double) currentPlan = '';
+      if (currentPlan === 'custom') currentPlan = '';
+
+      // 默认逻辑：如果没选，且只有一种支持，自动选；如果都支持，默认选单秤
+      if (!currentPlan) {
+        if (plan.single) {
+          selectPlan('single');
+        } else if (plan.double) {
+          selectPlan('double');
+        }
+      } else {
+        // 如果当前已经选了，同步一下长度（防止用户改了货物尺寸，长度更新）
+        selectPlan(currentPlan);
+      }
+
+    } else {
+      // 没命中表格，显示自定义输入
+      planSelection.style.display = 'none';
+      customLenDiv.style.display = 'block';
+      currentPlan = 'custom';
+      s_fixedLen.focus();
+    }
+  }
+
+  function selectPlan(plan) {
+    currentPlan = plan;
+    var pkgLenVal = parseFloat(s_pkgLen.value);
+    var matchedKey = null;
+    for (var key in planTable) {
+      if (Math.abs(pkgLenVal - parseFloat(key)) < 0.01) { matchedKey = key; break; }
+    }
+    
+    if (!matchedKey) return;
+    var planData = planTable[matchedKey];
+
+    if (plan === 'single' && planData.single) {
+      s_fixedLen.value = planData.single;
+      btnSinglePlan.style.borderColor = '#2563eb';
+      btnSinglePlan.style.background = '#eff6ff';
+      btnDoublePlan.style.borderColor = '#cbd5e1';
+      btnDoublePlan.style.background = '#fff';
+    } else if (plan === 'double' && planData.double) {
+      s_fixedLen.value = planData.double;
+      btnDoublePlan.style.borderColor = '#2563eb';
+      btnDoublePlan.style.background = '#eff6ff';
+      btnSinglePlan.style.borderColor = '#cbd5e1';
+      btnSinglePlan.style.background = '#fff';
+    }
+  }
+
+  btnSinglePlan.addEventListener('click', function(){ if(!btnSinglePlan.disabled) selectPlan('single'); });
+  btnDoublePlan.addEventListener('click', function(){ if(!btnDoublePlan.disabled) selectPlan('double'); });
+  s_pkgLen.addEventListener('input', updatePlanUI);
+
+  function updateUI() {
+    tabSort.classList.toggle('active', topMode === 'sort');
+    tabInst.classList.toggle('active', topMode === 'inst');
+    
+    subRowSort.classList.toggle('hidden', topMode !== 'sort');
+    subRowInst.classList.toggle('hidden', topMode !== 'inst');
+    
+    tabStop.classList.toggle('active', sortMode === 'stop');
+    tabRunning.classList.toggle('active', sortMode === 'running');
+    
+    tabInstSingle.classList.toggle('active', instMode === 'single');
+    tabInstDouble.classList.toggle('active', instMode === 'double');
+
+    var isStop = (topMode === 'sort' && sortMode === 'stop');
+    
+    if (topMode === 'sort') {
+      if (sortMode === 'stop') {
+        subRowSortStop.classList.remove('hidden');
+        tabM600SortStop.classList.toggle('active', model === 'm600');
+        tabM800SortStop.classList.toggle('active', model === 'm800');
+      } else {
+        subRowSortStop.classList.add('hidden');
+      }
+    } else {
+      subRowSortStop.classList.add('hidden');
+    }
+    
+    stopPanel.style.display = (isStop) ? 'block' : 'none';
+    generalPanel.style.display = (topMode === 'sort' && sortMode === 'running') ? 'block' : 'none';
+    instSinglePanel.style.display = (topMode === 'inst' && instMode === 'single') ? 'block' : 'none';
+    instDoublePanel.style.display = (topMode === 'inst' && instMode === 'double') ? 'block' : 'none';
+    
+    generalResultBox.style.display = 'none';
+    stopResultBox.classList.remove('show');
+    instResultBox.style.display = 'none';
+    
+    if (isStop) {
+      leftImage.style.display = 'block';
+      rightImage.style.display = 'block';
+    } else {
+      leftImage.style.display = 'none';
+      rightImage.style.display = 'none';
+    }
+    
+    if (isStop) {
+      stopResultBox.classList.add('show');
+      calcBtn.textContent = '计算前后端效率';
+      resetStopUI();
+    } else if (topMode === 'inst') {
+      instResultBox.style.display = 'block';
+      calcBtn.textContent = '计算/反推';
+      resetInstUI();
+    } else {
+      generalResultBox.style.display = 'block';
+      calcBtn.textContent = '计算未知项';
+      
+      labelA.innerHTML = '摆轮长度（m）<span class="label-note">（仅跟输送线有关，与货物长度无关）</span>';
+      lenBGroup.style.display = 'block';
+      formulaTitle.textContent = '3600 ÷ [（摆轮长度 + 包裹长度）÷ 皮带速度] = 效率';
+      hintText.innerHTML = '请填写其中三个，留空一个，然后点“计算未知项”';
+      
+      clearGeneralResult('留空一个输入框，点击下方按钮');
+    }
+  }
+
+  function setModel(m) {
+    if (model === m) return;
+    model = m;
+    if (topMode === 'sort' && sortMode === 'stop') {
+      currentPlan = '';
+      updatePlanUI();
+    }
+    updateUI();
+  }
+
+  function resetStopUI() {
+    frontEff.textContent = '—'; backEff.textContent = '—';
+    totalEff.textContent = '—';
+    frontSub.textContent = '节距 —'; backSub.textContent = '节距 —';
+    blockFront.classList.remove('bottleneck');
+    blockBack.classList.remove('bottleneck');
+    totalBar.style.background = '#1e3a8a';
+    totalBar.innerHTML = '整线兼容效率：<strong id="totalEff">—</strong> 件/小时';
+  }
+
+  function resetInstUI() {
+    instResVal.textContent = '—';
+    instMultiRes.innerHTML = '';
+    instResultBox.classList.remove('bad');
+  }
+
+  function clearGeneralResult(msg) {
+    resLabel.textContent = '等待计算';
+    resVal.textContent = '—';
+    resUnit.textContent = '';
+    detailEl.textContent = msg || '请填写参数';
+    formulaEl.textContent = '';
+    generalResultBox.classList.remove('bad');
+  }
+
+  function calcGeneral() {
+    var lenA = lenAEl.value.trim() === '' ? NaN : parseFloat(lenAEl.value);
+    var lenB = lenBEl.value.trim() === '' ? NaN : parseFloat(lenBEl.value);
+    var speed = speedEl.value.trim() === '' ? NaN : parseFloat(speedEl.value);
+    var eff = effEl.value.trim() === '' ? NaN : parseFloat(effEl.value);
+
+    if ((!isNaN(lenA) && lenA <= 0) || (!isNaN(lenB) && lenB <= 0) ||
+        (!isNaN(speed) && speed <= 0) || (!isNaN(eff) && eff <= 0)) {
+      clearGeneralResult('数值必须大于 0'); return;
+    }
+
+    var empty = [];
+    if (isNaN(lenA)) empty.push('lenA');
+    if (isNaN(lenB)) empty.push('lenB');
+    if (isNaN(speed)) empty.push('speed');
+    if (isNaN(eff)) empty.push('eff');
+
+    if (empty.length === 0) {
+      var t = (lenA + lenB) / speed;
+      var calcEff = 3600 / t;
+      if (Math.abs(calcEff - eff) < 0.01) {
+        resLabel.textContent = '校验通过'; resVal.textContent = fmt(eff); resUnit.textContent = ' 件/小时';
+        detailEl.textContent = '数值符合公式'; formulaEl.textContent = '';
+        generalResultBox.classList.remove('bad');
+      } else {
+        resLabel.textContent = '校验不通过'; resVal.textContent = fmt(calcEff); resUnit.textContent = ' 件/小时';
+        detailEl.textContent = '与输入的效率不一致'; formulaEl.textContent = '';
+        generalResultBox.classList.add('bad');
+      }
+      return;
+    }
+
+    if (empty.length > 1) { clearGeneralResult('请只留空一个输入框'); return; }
+
+    var target = empty[0];
+    generalResultBox.classList.remove('bad');
+
+    if (target === 'eff') {
+      var t = (lenA + lenB) / speed;
+      var res = 3600 / t;
+      effEl.value = fmt(res);
+      resLabel.textContent = '效率'; resVal.textContent = fmt(res); resUnit.textContent = ' 件/小时';
+      detailEl.textContent = '单件通过时间 = ' + fmt(t) + ' 秒'; formulaEl.textContent = '';
+    } else if (target === 'speed') {
+      var totalLen = lenA + lenB;
+      var res = totalLen * eff / 3600;
+      speedEl.value = fmt(res);
+      resLabel.textContent = '皮带速度'; resVal.textContent = fmt(res); resUnit.textContent = ' m/s';
+      detailEl.textContent = '约 ' + fmt(res * 60) + ' m/min'; formulaEl.textContent = '';
+    } else if (target === 'lenA') {
+      var res = 3600 * speed / eff - lenB;
+      if (res <= 0) {
+        resLabel.textContent = '数据矛盾'; resVal.textContent = '—'; resUnit.textContent = '';
+        detailEl.textContent = '算出的长度 ≤ 0'; formulaEl.textContent = '';
+        generalResultBox.classList.add('bad'); return;
+      }
+      lenAEl.value = fmt(res);
+      resLabel.textContent = '摆轮长度'; resVal.textContent = fmt(res); resUnit.textContent = ' m';
+      detailEl.textContent = ''; formulaEl.textContent = '';
+    } else if (target === 'lenB') {
+      var res = 3600 * speed / eff - lenA;
+      if (res <= 0) {
+        resLabel.textContent = '数据矛盾'; resVal.textContent = '—'; resUnit.textContent = '';
+        detailEl.textContent = '算出的包裹长度 ≤ 0'; formulaEl.textContent = '';
+        generalResultBox.classList.add('bad'); return;
+      }
+      lenBEl.value = fmt(res);
+      resLabel.textContent = '包裹长度'; resVal.textContent = fmt(res); resUnit.textContent = ' m';
+      detailEl.textContent = ''; formulaEl.textContent = '';
+    }
+  }
+
+  // 分拣-停机
+  function calcStop() {
+    var speed = parseFloat(s_speed.value);
+    var pkgLen = parseFloat(s_pkgLen.value);
+    var fixedLen = parseFloat(s_fixedLen.value);
+    var dataLen = parseFloat(s_dataLen.value);
+    var parcelCount = parseInt(s_parcelCount.value);
+    var wheelLen = parseFloat(s_wheelLen.value);
+    var transLen = parseFloat(s_transLen.value);
+
+    if (!(speed > 0 && pkgLen > 0 && fixedLen > 0 && dataLen >= 0 && parcelCount > 0 && wheelLen > 0 && transLen >= 0)) {
+      resetStopUI();
+      alert('请完整填写参数，并确保已选择称重方案或输入称台总长');
+      return;
+    }
+
+    var hiddenLiangFang = 0.9;
+    var frontTotalLen = fixedLen + hiddenLiangFang + dataLen;
+    
+    var frontPitch = frontTotalLen / parcelCount;
+    var eFront = (3600 * speed) / frontPitch;
+
+    if (frontPitch < pkgLen) {
+      blockFront.classList.add('bottleneck');
+      totalBar.style.background = '#dc2626';
+      totalBar.innerHTML = '数据矛盾：前端总长 ' + fmt(frontTotalLen) + 'm 装不下 ' + parcelCount + ' 件 ' + fmt(pkgLen) + 'm 的货';
+      frontEff.textContent = '—';
+      backEff.textContent = '—';
+      totalEff.textContent = '无解';
+      frontSub.textContent = '节距 ' + fmt(frontPitch) + 'm (空间不足)';
+      backSub.textContent = '节距 —';
+      return;
+    }
+
+    var backTotalLen = wheelLen + transLen;
+    var backPitch = backTotalLen;
+    var eBack = (3600 * speed) / backPitch;
+
+    if (backPitch < pkgLen) {
+      blockBack.classList.add('bottleneck');
+      totalBar.style.background = '#dc2626';
+      totalBar.innerHTML = '数据矛盾：后端总长 ' + fmt(backTotalLen) + 'm 装不下 ' + fmt(pkgLen) + 'm 的货';
+      frontEff.textContent = '—';
+      backEff.textContent = '—';
+      totalEff.textContent = '无解';
+      frontSub.textContent = '节距 —';
+      backSub.textContent = '节距 ' + fmt(backPitch) + 'm (空间不足)';
+      return;
+    }
+
+    frontEff.textContent = fmt(eFront);
+    frontSub.textContent = '节距 ' + fmt(frontPitch) + 'm (总长 ' + fmt(frontTotalLen) + 'm)';
+    backEff.textContent = fmt(eBack);
+    backSub.textContent = '节距 ' + fmt(backPitch) + 'm';
+
+    blockFront.classList.remove('bottleneck');
+    blockBack.classList.remove('bottleneck');
+    
+    totalBar.style.background = '#1e3a8a';
+
+    if (eFront < eBack) {
+      blockFront.classList.add('bottleneck');
+      totalEff.textContent = fmt(eFront);
+      totalBar.innerHTML = '瓶颈在前端，整线兼容效率：<strong id="totalEff">' + fmt(eFront) + '</strong> 件/小时';
+    } else if (eBack < eFront) {
+      blockBack.classList.add('bottleneck');
+      totalEff.textContent = fmt(eBack);
+      totalBar.innerHTML = '瓶颈在后端，整线兼容效率：<strong id="totalEff">' + fmt(eBack) + '</strong> 件/小时';
+    } else {
+      totalEff.textContent = fmt(eFront);
+      totalBar.innerHTML = '前后端平衡，整线兼容效率：<strong id="totalEff">' + fmt(eFront) + '</strong> 件/小时';
+    }
+  }
+
+  // 仪表-单/双秤
+  function calcInst() {
+    resetInstUI();
+    var html = '';
+
+    if (instMode === 'single') {
+      var maxLenEl = document.getElementById('i_max');
+      var reactEl  = document.getElementById('i_react');
+      var speedEl  = document.getElementById('i_speed');
+      var lenAEl   = document.getElementById('i_lenA');
+      var effEl    = document.getElementById('i_eff');
+
+      var maxLen = maxLenEl.value.trim() === '' ? NaN : parseFloat(maxLenEl.value);
+      var react  = reactEl.value.trim() === '' ? NaN : parseFloat(reactEl.value);
+      var speed  = speedEl.value.trim() === '' ? NaN : parseFloat(speedEl.value);
+      var lenA   = lenAEl.value.trim() === '' ? NaN : parseFloat(lenAEl.value);
+      var eff    = effEl.value.trim() === '' ? NaN : parseFloat(effEl.value);
+
+      var empty = [];
+      if (isNaN(maxLen)) empty.push('maxLen');
+      if (isNaN(react))  empty.push('react');
+      if (isNaN(speed))  empty.push('speed');
+      if (isNaN(lenA))   empty.push('lenA');
+      if (isNaN(eff))    empty.push('eff');
+
+      if (empty.length > 1) { showInstError('请最多只留空一个参数'); return; }
+
+      if (empty.length === 1) {
+        var target = empty[0];
+        var err = "";
+        if (target === 'speed') {
+          var denom = 7200 / eff - react;
+          if (denom <= 0) err = '当前效率过高或反应时间过长，导致皮带速度无解';
+          else {
+            speed = (2 * maxLen + lenA - 0.1) / denom;
+            if (speed <= 0) err = '计算出的速度为负数，请检查参数';
+            else speedEl.value = fmt(speed);
+          }
+        } else if (target === 'lenA') {
+          lenA = 2 * (3600 * speed / eff - maxLen) + 0.1 - react * speed;
+          var minLenA_physical = maxLen + speed * react;
+          if (lenA <= 0) err = '计算出的A秤长为负数，请检查参数';
+          else if (lenA < minLenA_physical) err = '反推出的A秤长(' + fmt(lenA) + 'm) 小于物理极限(' + fmt(minLenA_physical) + 'm)，无法达到目标效率。';
+          else lenAEl.value = fmt(lenA);
+        } else if (target === 'maxLen') {
+          maxLen = 3600 * speed / eff - (lenA - 0.1 + react * speed) / 2;
+          var minLenA_physical2 = maxLen + speed * react;
+          if (maxLen <= 0) err = '计算出的最大尺寸为负数，请检查参数';
+          else if (lenA < minLenA_physical2) err = '反推出的最大尺寸(' + fmt(maxLen) + 'm) 导致物理极限(' + fmt(minLenA_physical2) + 'm) 大于A秤长，无解。';
+          else maxLenEl.value = fmt(maxLen);
+        } else if (target === 'react') {
+          react = (2 * (3600 * speed / eff - maxLen) - (lenA - 0.1)) / speed;
+          if (react < 0) err = '计算出的反应时间为负数，请检查参数';
+          else reactEl.value = fmt(react);
+        }
+        if (err) { showInstError(err); return; }
+      }
+
+      maxLen = parseFloat(maxLenEl.value) || 0;
+      react  = parseFloat(reactEl.value) || 0;
+      speed  = parseFloat(speedEl.value) || 0;
+      lenA   = parseFloat(lenAEl.value) || 0;
+
+      var minLenA_physical = maxLen + speed * react;
+      if (lenA < minLenA_physical) {
+        showInstError('A秤长度不足：当前A秤长 ' + fmt(lenA) + 'm 小于物理极限 ' + fmt(minLenA_physical) + 'm（最大尺寸 + 反应距离），包裹无法完整称重或会漏检。');
+        return;
+      }
+
+      var reactDist = react * speed;
+      var gap = (lenA - 0.1 + reactDist) / 2;
+      var pitch = maxLen + gap;
+      var calcEff = 3600 * speed / pitch;
+
+      instResVal.textContent = fmt(calcEff);
+      
+      html += '<div class="res-row"><span>包裹间距</span><strong>' + fmt(gap) + ' m</strong></div>';
+      html += '<div class="res-row"><span>等效节距</span><strong>' + fmt(pitch) + ' m</strong></div>';
+      
+      html += '<div style="font-size:11.5px; color:#64748b; margin-top:8px; padding-top:8px; border-top:1px dashed #e2e8f0; line-height:1.6;">';
+      html += '<b>【计算过程】</b><br>';
+      html += '1. 包裹间距 = ( ' + fmt(lenA) + ' - 0.1 + ' + fmt(reactDist) + ' ) ÷ 2 = <b>' + fmt(gap) + ' m</b><br>';
+      html += '2. 等效节距 = ' + fmt(maxLen) + ' + ' + fmt(gap) + ' = <b>' + fmt(pitch) + ' m</b><br>';
+      html += '3. 效率 = 3600 × ' + fmt(speed) + ' ÷ ' + fmt(pitch) + ' = <b>' + fmt(calcEff) + '</b>';
+      html += '</div>';
+
+      instMultiRes.innerHTML = html;
+
+    } else {
+      var minLenEl = document.getElementById('id_min');
+      var reactEl  = document.getElementById('id_react');
+      var speedEl  = document.getElementById('id_speed');
+      var lenAEl   = document.getElementById('id_lenA');
+      var lenBEl   = document.getElementById('id_lenB');
+      var maxLenEl = document.getElementById('id_max');
+      var pkgLenEl = document.getElementById('id_pkgLen');
+      var effEl    = document.getElementById('id_eff');
+
+      var minLen = minLenEl.value.trim() === '' ? NaN : parseFloat(minLenEl.value);
+      var react  = reactEl.value.trim() === '' ? NaN : parseFloat(reactEl.value);
+      var speed  = speedEl.value.trim() === '' ? NaN : parseFloat(speedEl.value);
+      var lenA   = lenAEl.value.trim() === '' ? NaN : parseFloat(lenAEl.value);
+      var lenB   = lenBEl.value.trim() === '' ? NaN : parseFloat(lenBEl.value);
+      var maxLen = maxLenEl.value.trim() === '' ? NaN : parseFloat(maxLenEl.value);
+      var pkgLen = pkgLenEl.value.trim() === '' ? NaN : parseFloat(pkgLenEl.value);
+      var eff    = effEl.value.trim() === '' ? NaN : parseFloat(effEl.value);
+
+      var empty = [];
+      if (isNaN(minLen)) empty.push('minLen');
+      if (isNaN(react))  empty.push('react');
+      if (isNaN(speed))  empty.push('speed');
+      if (isNaN(lenA))   empty.push('lenA');
+      if (isNaN(lenB))   empty.push('lenB');
+      if (isNaN(maxLen)) empty.push('maxLen');
+      if (isNaN(pkgLen)) empty.push('pkgLen');
+      if (isNaN(eff))    empty.push('eff');
+
+      if (empty.length > 1) { showInstError('请最多只留空一个参数'); return; }
+
+      if (empty.length === 1) {
+        var target = empty[0];
+        var err = "";
+        var reactDist = react * speed;
+        var targetPitch = 3600 * speed / eff;
+        var targetGap = targetPitch - pkgLen;
+
+        if (target === 'lenA') {
+          if (isNaN(targetPitch) || targetPitch <= 0) err = "参数不完整";
+          else {
+            var gapAB_calc = (lenB / 2) + reactDist;
+            var gapReact_calc = Math.max(0, reactDist - pkgLen);
+            if (targetGap < gapAB_calc || targetGap < gapReact_calc) {
+              err = "目标效率超出B秤或反应时间的限制，无法单纯通过调整A秤长实现";
+            } else {
+              lenA = 2 * targetGap + minLen - reactDist;
+              if (lenA <= 0) err = "算出的A秤长<=0，数据矛盾";
+              else lenAEl.value = fmt(lenA);
+            }
+          }
+        }
+        else if (target === 'lenB') {
+          if (isNaN(targetPitch) || targetPitch <= 0) err = "参数不完整";
+          else {
+            var gapA_calc = (lenA - minLen + reactDist) / 2;
+            var gapReact_calc = Math.max(0, reactDist - pkgLen);
+            if (targetGap < gapA_calc || targetGap < gapReact_calc) {
+              err = "目标效率超出A秤或反应时间的限制，无法单纯通过调整B秤长实现";
+            } else {
+              lenB = (targetGap - reactDist) * 2;
+              if (lenB <= 0) err = "算出的B秤长<=0，数据矛盾";
+              else lenBEl.value = fmt(lenB);
+            }
+          }
+        }
+        else if (target === 'pkgLen') {
+          if (isNaN(targetPitch) || targetPitch <= 0) err = "参数不完整";
+          else {
+            var gapA_calc = (lenA - minLen + reactDist) / 2;
+            var gapAB_calc = (lenB / 2) + reactDist;
+            var fixedMaxGap = Math.max(gapA_calc, gapAB_calc);
+            pkgLen = targetPitch - fixedMaxGap;
+            if (pkgLen <= 0) err = "算出的平均包裹长度<=0，数据矛盾";
+            else pkgLenEl.value = fmt(pkgLen);
+          }
+        }
+        else if (target === 'speed') {
+          var bestSpeed = NaN;
+          var minDiff = Infinity;
+          for (var v = 0.1; v <= 10; v += 0.01) {
+            var rd = react * v;
+            var gA = (lenA - minLen + rd) / 2;
+            var gAB = (lenB / 2) + rd;
+            var gR = Math.max(0, rd - pkgLen);
+            var fGap = Math.max(gA, gAB, gR);
+            var p = pkgLen + fGap;
+            var calcE = 3600 * v / p;
+            if (Math.abs(calcE - eff) < minDiff) {
+              minDiff = Math.abs(calcE - eff);
+              bestSpeed = v;
+            }
+          }
+          if (bestSpeed !== NaN && minDiff < 10) speedEl.value = fmt(bestSpeed);
+          else err = "无法反推合适的速度，请检查效率目标是否过高";
+        }
+        else if (target === 'react') {
+          var bestReact = NaN;
+          var minDiff = Infinity;
+          for (var r = 0.01; r <= 1.5; r += 0.01) {
+            var rd = r * speed;
+            var gA = (lenA - minLen + rd) / 2;
+            var gAB = (lenB / 2) + rd;
+            var gR = Math.max(0, rd - pkgLen);
+            var fGap = Math.max(gA, gAB, gR);
+            var p = pkgLen + fGap;
+            var calcE = 3600 * speed / p;
+            if (Math.abs(calcE - eff) < minDiff) {
+              minDiff = Math.abs(calcE - eff);
+              bestReact = r;
+            }
+          }
+          if (bestReact !== NaN && minDiff < 10) reactEl.value = fmt(bestReact);
+          else err = "无法反推合适的反应时间";
+        }
+        if (err) { showInstError(err); return; }
+      }
+
+      minLen = parseFloat(minLenEl.value) || 0;
+      react  = parseFloat(reactEl.value) || 0;
+      speed  = parseFloat(speedEl.value) || 0;
+      lenA   = parseFloat(lenAEl.value) || 0;
+      lenB   = parseFloat(lenBEl.value) || 0;
+      maxLen = parseFloat(maxLenEl.value) || 0;
+      pkgLen = parseFloat(pkgLenEl.value) || 0;
+
+      var totalLenAB = lenA + lenB;
+      var minTotalLenAB = maxLen + speed * react;
+      if (totalLenAB < minTotalLenAB) {
+        showInstError('秤台总长不足：当前A秤+B秤总长 ' + fmt(totalLenAB) + 'm 小于物理极限 ' + fmt(minTotalLenAB) + 'm（货物最长尺寸 + 反应距离），会导致漏检。');
+        return;
+      }
+
+      var reactDist = react * speed;
+      var maxLenA = lenA - reactDist;
+      
+      var gapA = (lenA - minLen + reactDist) / 2;
+      var gapAB = (lenB / 2) + reactDist;
+      var finalGap = Math.max(gapA, gapAB, reactDist - pkgLen);
+      
+      var pitch = pkgLen + finalGap;
+      var calcEff = 3600 * speed / pitch;
+
+      instResVal.textContent = fmt(calcEff);
+
+      html += '<div class="res-row"><span>A秤最大长度</span><strong>' + fmt(maxLenA) + ' m</strong></div>';
+      html += '<div class="res-row"><span>A秤包裹间距</span><strong>' + fmt(gapA) + ' m</strong></div>';
+      html += '<div class="res-row"><span>AB秤包裹间距</span><strong>' + fmt(gapAB) + ' m</strong></div>';
+      html += '<div class="res-row"><span>最终包裹间距</span><strong>' + fmt(finalGap) + ' m</strong></div>';
+
+      if (maxLen > lenA) {
+        html += '<div class="res-row" style="color:#ea580c;"><span>⚠️ 超长件降效</span><strong>最长包裹超出A秤长度，双秤无法并行，实际效率大幅降低</strong></div>';
+      }
+
+      html += '<div style="font-size:11.5px; color:#64748b; margin-top:8px; padding-top:8px; border-top:1px dashed #e2e8f0; line-height:1.6;">';
+      html += '<b>【计算过程】</b><br>';
+      html += '1. A秤间距 = ( ' + fmt(lenA) + ' - ' + fmt(minLen) + ' + ' + fmt(reactDist) + ' ) ÷ 2 = <b>' + fmt(gapA) + ' m</b><br>';
+      html += '2. AB秤间距 = ( ' + fmt(lenB) + ' ÷ 2 ) + ' + fmt(reactDist) + ' = <b>' + fmt(gapAB) + ' m</b><br>';
+      html += '3. 最终间距 = max(' + fmt(gapA) + ', ' + fmt(gapAB) + ', ' + fmt(Math.max(0, reactDist - pkgLen)) + ') = <b>' + fmt(finalGap) + ' m</b><br>';
+      html += '4. 等效节距 = ' + fmt(pkgLen) + ' + ' + fmt(finalGap) + ' = <b>' + fmt(pitch) + ' m</b><br>';
+      html += '5. 效率 = 3600 × ' + fmt(speed) + ' ÷ ' + fmt(pitch) + ' = <b>' + fmt(calcEff) + '</b>';
+      html += '</div>';
+
+      instMultiRes.innerHTML = html;
+    }
+  }
+
+  function showInstError(msg) {
+    instResultBox.classList.add('bad');
+    instResVal.textContent = '无解';
+    instMultiRes.innerHTML = '<div class="res-row" style="color:#dc2626; justify-content:center; font-weight:600;">' + msg + '</div>';
+  }
+
+  function doCalc() {
+    if (topMode === 'sort' && sortMode === 'stop') {
+      calcStop();
+    } else if (topMode === 'inst') {
+      calcInst();
+    } else {
+      calcGeneral();
+    }
+  }
+
+  tabSort.addEventListener('click', function(){ topMode = 'sort'; updateUI(); });
+  tabInst.addEventListener('click', function(){ topMode = 'inst'; updateUI(); });
+  
+  tabStop.addEventListener('click', function(){ sortMode = 'stop'; updateUI(); });
+  tabRunning.addEventListener('click', function(){ sortMode = 'running'; updateUI(); });
+  tabInstSingle.addEventListener('click', function(){ instMode = 'single'; updateUI(); });
+  tabInstDouble.addEventListener('click', function(){ instMode = 'double'; updateUI(); });
+  
+  tabM600SortStop.addEventListener('click', function(){ setModel('m600'); });
+  tabM800SortStop.addEventListener('click', function(){ setModel('m800'); });
+
+  calcBtn.addEventListener('click', doCalc);
+
+  resetBtn.addEventListener('click', function() {
+    lenAEl.value = ''; lenBEl.value = ''; speedEl.value = ''; effEl.value = '';
+    s_speed.value = ''; s_pkgLen.value = ''; s_dataLen.value = ''; s_parcelCount.value = ''; s_wheelLen.value = ''; s_transLen.value = '';
+    
+    // 恢复方案初始状态
+    currentPlan = '';
+    btnSinglePlan.style.borderColor = '#cbd5e1';
+    btnSinglePlan.style.background = '#fff';
+    btnDoublePlan.style.borderColor = '#cbd5e1';
+    btnDoublePlan.style.background = '#fff';
+    s_fixedLen.value = '';
+    updatePlanUI();
+
+    if (topMode === 'sort' && sortMode === 'stop') {
+      resetStopUI();
+      s_speed.focus();
+    } else if (topMode === 'inst') {
+      resetInstUI();
+      document.getElementById('i_eff').value = '';
+      document.getElementById('id_eff').value = '';
+    } else {
+      clearGeneralResult('留空一个输入框，点击下方按钮');
+      lenAEl.focus();
+    }
+  });
+
+  document.querySelectorAll('input').forEach(function(el) {
+    el.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') doCalc();
+    });
+  });
+
+  updateUI();
+})();
+</script>
+</body>
+</html>
